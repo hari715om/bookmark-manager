@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const rateLimit = require('express-rate-limit');
 const { v4: uuidv4 } = require('uuid');
 const http = require('http');
@@ -230,6 +231,12 @@ app.get('/metadata', async (req, res) => {
 app.use((err, req, res, next) => {
     console.error('Unhandled error:', err.message);
     res.status(500).json({ error: 'Internal server error' });
+});
+
+const clientPath = path.join(__dirname, '..', 'frontend', 'dist');
+app.use(express.static(clientPath));
+app.get('*', (req, res) => {
+    res.sendFile(path.join(clientPath, 'index.html'));
 });
 
 if (require.main === module) {

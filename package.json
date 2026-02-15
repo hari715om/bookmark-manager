@@ -4,6 +4,8 @@
 "description": "Bookmark Manager with REST API backend and React frontend",
 "scripts": {
 "start": "concurrently \"npm run server\" \"npm run client\"",
+"start:prod": "node backend/server.js",
+"build": "npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend",
 "server": "cd backend && node server.js",
 "client": "cd frontend && npm run dev",
 "install:all": "npm install && npm install --prefix backend && npm install --prefix frontend",
