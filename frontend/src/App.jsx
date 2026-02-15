@@ -106,6 +106,7 @@ export default function App() {
 
             <div className="toolbar">
                 <input
+                    id="search-bookmarks"
                     className="search-input"
                     type="text"
                     placeholder="Search bookmarks by title or URL..."

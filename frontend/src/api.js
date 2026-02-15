@@ -42,3 +42,8 @@ export async function deleteBookmark(id) {
     });
     return handleResponse(res);
 }
+
+export async function fetchMetadata(url) {
+    const res = await fetch(`/metadata?url=${encodeURIComponent(url)}`);
+    return handleResponse(res);
+}

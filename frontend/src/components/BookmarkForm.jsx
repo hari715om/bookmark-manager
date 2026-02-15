@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { fetchMetadata } from '../api';
 
 const EMPTY_FORM = { url: '', title: '', description: '', tags: '' };
 
@@ -14,6 +15,9 @@ function isValidUrl(string) {
 export default function BookmarkForm({ onSubmit, editingBookmark, onCancelEdit }) {
     const [form, setForm] = useState(EMPTY_FORM);
     const [error, setError] = useState('');
+    const [fetchingTitle, setFetchingTitle] = useState(false);
+    const formRef = useRef(null);
+    const fetchTimeoutRef = useRef(null);
 
     useEffect(() => {
         if (editingBookmark) {
@@ -24,10 +28,39 @@ export default function BookmarkForm({ onSubmit, editingBookmark, onCancelEdit }
                 tags: editingBookmark.tags ? editingBookmark.tags.join(', ') : '',
             });
             setError('');
+            formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         } else {
             setForm(EMPTY_FORM);
         }
     }, [editingBookmark]);
+
+    const autoFetchTitle = useCallback(async (url) => {
+        if (!isValidUrl(url) || editingBookmark) return;
+        setFetchingTitle(true);
+        try {
+            const data = await fetchMetadata(url);
+            if (data.title) {
+                setForm((prev) => {
+                    if (!prev.title || prev.title === '') {
+                        return { ...prev, title: data.title };
+                    }
+                    return prev;
+                });
+            }
+        } catch {
+            // silently ignore fetch failures
+        } finally {
+            setFetchingTitle(false);
+        }
+    }, [editingBookmark]);
+
+    function handleUrlBlur() {
+        const url = form.url.trim();
+        if (url && isValidUrl(url) && !form.title && !editingBookmark) {
+            if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
+            fetchTimeoutRef.current = setTimeout(() => autoFetchTitle(url), 300);
+        }
+    }
 
     function validate() {
         if (!form.url.trim()) return 'URL is required';
@@ -89,36 +122,39 @@ export default function BookmarkForm({ onSubmit, editingBookmark, onCancelEdit }
     }
 
     return (
-        <div className="form-container">
+        <div className="form-container" ref={formRef} id="bookmark-form">
             <h2>{editingBookmark ? 'Edit Bookmark' : 'Add New Bookmark'}</h2>
-            {error && <div className="error-message">{error}</div>}
-            <form onSubmit={handleSubmit}>
+            {error && <div className="error-message" role="alert">{error}</div>}
+            <form onSubmit={handleSubmit} noValidate>
                 <div className="form-grid">
                     <div className="form-group">
-                        <label htmlFor="url">URL *</label>
+                        <label htmlFor="bookmark-url">URL *</label>
                         <input
-                            id="url"
-                            type="text"
+                            id="bookmark-url"
+                            type="url"
                             placeholder="https://example.com"
                             value={form.url}
                             onChange={(e) => handleChange('url', e.target.value)}
+                            onBlur={handleUrlBlur}
                         />
                     </div>
                     <div className="form-group">
-                        <label htmlFor="title">Title *</label>
+                        <label htmlFor="bookmark-title">
+                            Title * {fetchingTitle && <span className="fetching-hint">(fetching...)</span>}
+                        </label>
                         <input
-                            id="title"
+                            id="bookmark-title"
                             type="text"
-                            placeholder="Website title"
+                            placeholder={fetchingTitle ? 'Fetching title...' : 'Website title'}
                             value={form.title}
                             onChange={(e) => handleChange('title', e.target.value)}
                             maxLength={200}
                         />
                     </div>
                     <div className="form-group full-width">
-                        <label htmlFor="description">Description</label>
+                        <label htmlFor="bookmark-description">Description</label>
                         <textarea
-                            id="description"
+                            id="bookmark-description"
                             placeholder="Brief description (optional)"
                             value={form.description}
                             onChange={(e) => handleChange('description', e.target.value)}
@@ -127,9 +163,9 @@ export default function BookmarkForm({ onSubmit, editingBookmark, onCancelEdit }
                         />
                     </div>
                     <div className="form-group full-width">
-                        <label htmlFor="tags">Tags (comma-separated, max 5)</label>
+                        <label htmlFor="bookmark-tags">Tags (comma-separated, max 5)</label>
                         <input
-                            id="tags"
+                            id="bookmark-tags"
                             type="text"
                             placeholder="e.g. javascript, react, frontend"
                             value={form.tags}
@@ -138,11 +174,11 @@ export default function BookmarkForm({ onSubmit, editingBookmark, onCancelEdit }
                     </div>
                 </div>
                 <div className="form-actions">
-                    <button type="submit" className="btn btn-primary">
+                    <button type="submit" id="submit-bookmark" className="btn btn-primary">
                         {editingBookmark ? 'Update Bookmark' : 'Add Bookmark'}
                     </button>
                     {editingBookmark && (
-                        <button type="button" className="btn btn-secondary" onClick={handleCancel}>
+                        <button type="button" id="cancel-edit" className="btn btn-secondary" onClick={handleCancel}>
                             Cancel
                         </button>
                     )}

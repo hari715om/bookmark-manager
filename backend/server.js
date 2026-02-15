@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const { v4: uuidv4 } = require('uuid');
+const http = require('http');
+const https = require('https');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -185,6 +187,49 @@ app.delete('/bookmarks/:id', (req, res) => {
 
     bookmarks.splice(index, 1);
     res.status(204).send();
+});
+
+function fetchPageTitle(targetUrl) {
+    return new Promise((resolve) => {
+        const client = targetUrl.startsWith('https') ? https : http;
+        const request = client.get(targetUrl, { timeout: 5000 }, (response) => {
+            if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+                resolve(fetchPageTitle(response.headers.location));
+                return;
+            }
+            let html = '';
+            response.setEncoding('utf-8');
+            response.on('data', (chunk) => {
+                html += chunk;
+                if (html.length > 50000) response.destroy();
+            });
+            response.on('end', () => {
+                const match = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+                resolve(match ? match[1].trim() : '');
+            });
+            response.on('error', () => resolve(''));
+        });
+        request.on('error', () => resolve(''));
+        request.on('timeout', () => { request.destroy(); resolve(''); });
+    });
+}
+
+app.get('/metadata', async (req, res) => {
+    const { url } = req.query;
+    if (!url || !isValidUrl(url)) {
+        return res.status(400).json({ error: 'A valid URL is required' });
+    }
+    try {
+        const title = await fetchPageTitle(url);
+        res.json({ title: title || '' });
+    } catch {
+        res.json({ title: '' });
+    }
+});
+
+app.use((err, req, res, next) => {
+    console.error('Unhandled error:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
 });
 
 if (require.main === module) {

@@ -56,6 +56,7 @@ Runs 13 unit tests covering POST, GET, PUT, and DELETE endpoints.
 - **Real-time Search** — Client-side filtering by title or URL. Case-insensitive
 
 ### Bonus
+- **Automatic Metadata Fetching** — When adding a bookmark, leaving the URL field auto-fetches the page title
 - **Dark Mode Toggle** — Persisted to localStorage
 - **Rate Limiting** — 100 requests per 15-minute window via express-rate-limit
 - **Unit Tests** — 13 test cases across 4 endpoint groups (POST, GET, PUT, DELETE)
@@ -68,6 +69,7 @@ Runs 13 unit tests covering POST, GET, PUT, and DELETE endpoints.
 | POST   | /bookmarks         | 201, 400           | Create with validation          |
 | PUT    | /bookmarks/:id     | 200, 400, 404      | Update by ID                    |
 | DELETE | /bookmarks/:id     | 204, 404           | Delete by ID                    |
+| GET    | /metadata?url=     | 200, 400           | Fetch page title from URL       |
 
 ### Validation Rules
 - `url` — Required, must be valid HTTP/HTTPS URL
@@ -104,11 +106,8 @@ bookmark-manager/
 
 ## AI Tools Used
 
-- Gemini (Antigravity) — Code generation, architecture decisions, debugging
+- Gemini, chatgpt — Code generation, architecture decisions, debugging
 
-## Time Spent
-
-~30 minutes
 
 ## Assumptions
 
